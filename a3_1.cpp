@@ -195,7 +195,7 @@ class directory {
             cout << "error" << endl;
         }
     }
-   void echo(const vector<string>& args) {
+    void echo(const vector<string>& args) {
         auto removeQuotes = [](const string& str) -> string {
             if ((str.front() == '\'' && str.back() == '\'') || 
                 (str.front() == '"' && str.back() == '"')) {
@@ -216,85 +216,53 @@ class directory {
             string path = args[2];              // 文件路径
 
             if (redirect != ">" && redirect != ">>") {
-                cout << "error1" << endl;        // 非法操作符
+                cout << "error" << endl;        // 非法操作符
                 return;
             }
             // 修正路径为空或非法的情况
             if (path.empty()) {
-                cout << "error2" << endl;       // 空路径报错
+                cout << "error" << endl;       // 空路径报错
                 return;
             }
+
             vector<string> parts = splitPath(path);  // 获取路径的各个部分
             File* current = path.empty() || path[0] != '/' ? cwd : root;  // 从当前工作目录开始
 
-
-            for (size_t i = 0; i < parts.size(); ++i) {
+            // 遍历路径的每个部分，除了最后一个部分之外，都要确保路径存在
+            for (size_t i = 0; i < parts.size() - 1; ++i) {
                 const string& part = parts[i];
-                bool isLast = (i == parts.size() - 1); // 判断是否是最后一次迭代
 
-                // 如果当前节点不存在，创建它
+                // 如果当前目录没有这个子目录，报错并返回
                 if (current->children.find(part) == current->children.end()) {
-                    File* newNode = new File(part, isLast, current);  // 最后一次创建文件
-                    current->children[part] = newNode;               // 将新节点加入当前目录的子目录中
+                    cout << "error" << endl;
+                    return;
                 }
 
-                current = current->children[part]; // 进入下一级
-            }
-            // 当前节点必须是文件
-            if (!current->isFile) {
-                cout << "error3" << endl; // 如果最终节点是目录，报错
-                return;
+                current = current->children[part]; // 进入下一级目录
             }
 
-            // // 修正路径为空或非法的情况
-            // if (path.empty()) {
-            //     cout << "error" << endl;       // 空路径报错
-            //     return;
-            // }
+            // 最后一个部分是文件，要确保其存在，如果不存在则创建它
+            const string& fileName = parts.back();
+            File* file = nullptr;
 
-            // // 使用 navigate 定位父目录
-            // size_t lastSlash = path.find_last_of('/');
-            // string parentPath = lastSlash != string::npos ? path.substr(0, lastSlash) : ".";
-            // string fileName = path.substr(lastSlash + 1);
-
-            // if (fileName.empty()) {
-            //     cout << "error" << endl;       // 非法路径（文件名为空）
-            //     return;
-            // }
-
-            // File* parentDir = nullptr;
-
-            // if (parentPath.empty() || parentPath == "/") {
-            //     // 如果路径为空或是根目录，直接操作根目录
-            //     parentDir = root;
-            // } else {
-            //     // 否则导航至父目录
-            //     parentDir = navigate(parentPath, false); // 不强制要求路径必须存在
-            // }
-
-
-            // if (!parentDir || parentDir->isFile) {
-            //     cout << "error" << endl;       // 父目录不存在或非法
-            //     return;
-            // }
-
-            // 获取或创建目标文件
-            // File* file = parentDir->getFile(fileName);
-            // if (!file) {
-            //     file = new File(fileName, true, parentDir);
-            //     parentDir->addFile(file);
-            // }
+            if (current->children.find(fileName) == current->children.end()) {
+                file = new File(fileName, true, current); // 创建新文件
+                current->children[fileName] = file;
+            } else {
+                file = current->children[fileName]; // 文件已经存在
+            }
 
             // 执行重定向操作
             if (redirect == ">") {
-                current->overwriteContent(text + "\n");
+                file->overwriteContent(text + "\n");
             } else if (redirect == ">>") {
-                current->appendContent(text + "\n");
+                file->appendContent(text + "\n");
             }
         } else {
-            cout << "error4" << endl; // 参数错误
+            cout << "error" << endl; // 参数错误
         }
     }
+
 
 
 
@@ -414,17 +382,19 @@ int main() {
                 args.push_back(temp);
             }
         }
-
-
             if (inQuotes) {
                 cout << "error6" << endl; // 引号不匹配
             } else {
                 fs.echo(args);
             }
+        }else if (cmd == "ls") {
+            string path = "/";
+            if (ss >> path) {
+                fs.ls(path);
+            } else {
+                fs.ls("");
+            }
         }
-
-
-
     }
 
 
