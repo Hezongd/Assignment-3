@@ -155,7 +155,17 @@ Linux/Unix系统拥有强大的文件系统，共享一套相似的工具集，�
     echo 'Sekai de boku wa hitoribocchi datta' >> ./Haruhikage
     echo 'Chiru koto shika shiranai haru wa' >> ../../Live20250426/songs/Haruhikage
     echo 'Maitoshi tsumetaku ashirau' >> /BanGDream/MyGO/Live20250426/songs/Haruhikage
-
+    find /BanGDream -name 'Haru.*'
+    mkdir -p /BanGDream/CRYCHIC/songs
+    cd /BanGDream/CRYCHIC/songs
+    mv /BanGDream/MyGO/Live20250426/songs/Haruhikage ./
+    ls -a .
+    cat Haruhikage
+    cd /BanGDream
+    rm -r ./CRYCHIC
+    find /BanGDream -name 'Haru.*'
+    echo 'Haruhikage deleted'
+    cd CRYCHIC
 
 ## 示例输出 #1
     /
@@ -164,7 +174,8 @@ Linux/Unix系统拥有强大的文件系统，共享一套相似的工具集，�
     Sekai de boku wa hitoribocchi datta
     Chiru koto shika shiranai haru wa
     Maitoshi tsumetaku ashirau
-
+    Haruhikage deleted
+    error
 
 ## 测试用例
 总共有20个测试用例，每个测试用例占5分。鼓励您实现部分功能并提交半成品代码以测试已实现部分是否正确。对于测试用例1-18，我们保证不会发生错误。您不必过于担心效率，简单的深度优先搜索就足够用于 `find` 命令。
