@@ -165,15 +165,29 @@ class directory {
             cout << "error" << endl;
             return;
         }
+
+        // 包括 "." 和 ".." 在内的所有项
         vector<string> entries = {".", ".."};
+
+        // 将所有目录项加入 entries
         for (const auto& [name, _] : dir->children) {
             entries.push_back(name);
         }
+
+        // 按字典顺序排序
         sort(entries.begin(), entries.end());
+
+        // 输出所有项，用制表符分隔
         for (size_t i = 0; i < entries.size(); ++i) {
-            cout << entries[i] << (i + 1 < entries.size() ? "\t" : "\n");
+            cout << entries[i];
+            if (i + 1 < entries.size()) {
+                cout << "\t";  // 制表符分隔
+            } else {
+                cout << "\n";  // 最后一个项后换行
+            }
         }
     }
+
     void pwd() {
         File* current = cwd;
         string path = "";
@@ -185,6 +199,15 @@ class directory {
             path = "/";
         }
         cout << path << endl;
+    }
+    
+    void cd(const string& path) {
+        File* dir = navigate(path);
+        if (dir && !dir->isFile) {
+            cwd = dir;  // 切换工作目录
+        } else {
+            cout << "error" << endl;  // 无法切换
+        }
     }
 
     void cat(const string& path) {
@@ -264,17 +287,6 @@ class directory {
     }
 
 
-
-
-
-    void cd(const string& path) {
-        File* dir = navigate(path);
-        if (dir && !dir->isFile) {
-            cwd = dir;  // 切换工作目录
-        } else {
-            cout << "error" << endl;  // 无法切换
-        }
-    }
 
     
     void rm(const vector<string>& args) {
@@ -388,11 +400,19 @@ int main() {
                 fs.echo(args);
             }
         }else if (cmd == "ls") {
-            string path = "/";
-            if (ss >> path) {
-                fs.ls(path);
+            string option, path = "";
+            if (ss >> option) {  // 读取第一个参数
+                if (option == "-a") {
+                    if (ss >> path) {  // 如果有路径，读取路径
+                        fs.ls(path);  // 调用ls，传入路径
+                    } else {
+                        fs.ls("");  // 如果没有路径，使用当前目录
+                    }
+                } else {
+                    cout << "error" << endl;  // 如果没有 -a 选项，或者有其他不合法的选项
+                }
             } else {
-                fs.ls("");
+                fs.ls("");  // 默认无参数时，列出当前目录
             }
         }
     }
