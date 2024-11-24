@@ -186,28 +186,118 @@ class directory {
         }
         cout << path << endl;
     }
-    void echo(const string& content, const string& operatorType = "", const string& path = "") {
-        if (operatorType.empty()) {
-            cout << content << endl;
-        } else if (operatorType == ">" || operatorType == ">>") {
-            if (path.empty()) {
-                throw runtime_error("Error: Path is required when using redirection.");
-            }
 
-            bool append = (operatorType == ">>");
-            createFile(path, content, append);
-        } else {
-            cout << "error" << endl;
-        }
-    }
     void cat(const string& path) {
         File* file = navigate(path);
         if (file && file->isFile) {
-            cout << file->content << endl;
+            cout << file->content;
         } else {
             cout << "error" << endl;
         }
     }
+   void echo(const vector<string>& args) {
+        auto removeQuotes = [](const string& str) -> string {
+            if ((str.front() == '\'' && str.back() == '\'') || 
+                (str.front() == '"' && str.back() == '"')) {
+                return str.substr(1, str.size() - 2); // 去掉首尾引号
+            }
+            return str;
+        };
+
+        if (args.size() == 1) {
+            // 情况 1: 仅回显内容到控制台
+            cout << removeQuotes(args[0]) << endl;
+            return;
+        }
+
+        if (args.size() == 3) {
+            string text = removeQuotes(args[0]); // 去掉引号的内容
+            string redirect = args[1];          // 重定向操作符
+            string path = args[2];              // 文件路径
+
+            if (redirect != ">" && redirect != ">>") {
+                cout << "error1" << endl;        // 非法操作符
+                return;
+            }
+            // 修正路径为空或非法的情况
+            if (path.empty()) {
+                cout << "error2" << endl;       // 空路径报错
+                return;
+            }
+            vector<string> parts = splitPath(path);  // 获取路径的各个部分
+            File* current = path.empty() || path[0] != '/' ? cwd : root;  // 从当前工作目录开始
+
+
+            for (size_t i = 0; i < parts.size(); ++i) {
+                const string& part = parts[i];
+                bool isLast = (i == parts.size() - 1); // 判断是否是最后一次迭代
+
+                // 如果当前节点不存在，创建它
+                if (current->children.find(part) == current->children.end()) {
+                    File* newNode = new File(part, isLast, current);  // 最后一次创建文件
+                    current->children[part] = newNode;               // 将新节点加入当前目录的子目录中
+                }
+
+                current = current->children[part]; // 进入下一级
+            }
+            // 当前节点必须是文件
+            if (!current->isFile) {
+                cout << "error3" << endl; // 如果最终节点是目录，报错
+                return;
+            }
+
+            // // 修正路径为空或非法的情况
+            // if (path.empty()) {
+            //     cout << "error" << endl;       // 空路径报错
+            //     return;
+            // }
+
+            // // 使用 navigate 定位父目录
+            // size_t lastSlash = path.find_last_of('/');
+            // string parentPath = lastSlash != string::npos ? path.substr(0, lastSlash) : ".";
+            // string fileName = path.substr(lastSlash + 1);
+
+            // if (fileName.empty()) {
+            //     cout << "error" << endl;       // 非法路径（文件名为空）
+            //     return;
+            // }
+
+            // File* parentDir = nullptr;
+
+            // if (parentPath.empty() || parentPath == "/") {
+            //     // 如果路径为空或是根目录，直接操作根目录
+            //     parentDir = root;
+            // } else {
+            //     // 否则导航至父目录
+            //     parentDir = navigate(parentPath, false); // 不强制要求路径必须存在
+            // }
+
+
+            // if (!parentDir || parentDir->isFile) {
+            //     cout << "error" << endl;       // 父目录不存在或非法
+            //     return;
+            // }
+
+            // 获取或创建目标文件
+            // File* file = parentDir->getFile(fileName);
+            // if (!file) {
+            //     file = new File(fileName, true, parentDir);
+            //     parentDir->addFile(file);
+            // }
+
+            // 执行重定向操作
+            if (redirect == ">") {
+                current->overwriteContent(text + "\n");
+            } else if (redirect == ">>") {
+                current->appendContent(text + "\n");
+            }
+        } else {
+            cout << "error4" << endl; // 参数错误
+        }
+    }
+
+
+
 
     void cd(const string& path) {
         File* dir = navigate(path);
@@ -293,17 +383,47 @@ int main() {
             fs.rm(args);
         }
         else if (cmd == "echo") {
-            string content, operatorType, path;
-            ss >> ws;
-            getline(ss, content);
-            size_t opPos = content.find('>');
-            if (opPos != string::npos) {
-                operatorType = content.substr(opPos);
-                content = content.substr(0, opPos);
-                ss >> path;
+            string remaining;
+            getline(ss, remaining); // 获取echo命令后所有内容
+            stringstream argStream(remaining);
+
+            vector<string> args;
+            string temp;
+            bool inQuotes = false;
+            string quotedText;
+
+        while (argStream >> temp) {
+            if ((temp.front() == '\'' || temp.front() == '"') && !inQuotes) {
+                // 开始一个带引号的文本
+                inQuotes = true;
+                quotedText = temp;
+                // 如果引号里没有结束，继续处理
+                if (temp.back() == '\'' || temp.back() == '"') {
+                    inQuotes = false;
+                    args.push_back(quotedText);  // 处理完一个带引号的文本
+                }
+            } else if (inQuotes) {
+                // 处理引号中的内容
+                quotedText += " " + temp;
+                if (temp.back() == '\'' || temp.back() == '"') {
+                    inQuotes = false;
+                    args.push_back(quotedText); // 添加完整的引号内容
+                }
+            } else {
+                // 普通参数
+                args.push_back(temp);
             }
-            fs.echo(content, operatorType, path);
         }
+
+
+            if (inQuotes) {
+                cout << "error6" << endl; // 引号不匹配
+            } else {
+                fs.echo(args);
+            }
+        }
+
+
 
     }
 
