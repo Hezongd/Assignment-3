@@ -320,6 +320,12 @@ class directory {
         vector<string> results;
         regex re(pattern);
 
+        
+        // 检查 startPath 本身是否匹配
+        if (regex_match(startDir->name, re)) {
+            cout << startPath << endl;
+        }
+
         findHelper(startDir, re, ".", results);
 
         sort(results.begin(), results.end());
