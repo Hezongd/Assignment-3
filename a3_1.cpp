@@ -311,7 +311,7 @@ class directory {
         } 
     }
     // find 函数
-    void find(const string& startPath, const string& pattern) {
+    void find(const string& startPath, const string& pattern) {//find 要加上文件目录本身
         File* startDir = navigate(startPath);
         if (!startDir) {
             return;  // 如果起始路径不存在，直接返回
@@ -347,119 +347,104 @@ class directory {
 
 
 
-    void mv(const string& srcPath, const string& dstPath) {
-        File* srcFile = navigate(srcPath);
-        if (!srcFile) {
-            cout << "error: source path does not exist" << endl;
-            return;
-        }
-
-        File* dstDir = nullptr;
-        string newName = dstPath;
-
-        if (dstPath.back() == '/') {
-            // 移动到目标目录下
-            dstDir = navigate(dstPath.substr(0, dstPath.size() - 1));
-            if (!dstDir) {
-                // 目标目录不存在，创建目录
-                dstDir = new File(dstPath.substr(0, dstPath.size() - 1), false, cwd);
-                cwd->children[dstDir->name] = dstDir;
-            }
-            newName = srcFile->name;
-        } else {
-            // 重命名或移动为目标文件/目录
-            size_t pos = dstPath.find_last_of('/');
-            if (pos != string::npos) {
-                dstDir = navigate(dstPath.substr(0, pos));
-                if (!dstDir) {
-                    // 目标目录不存在，创建目录
-                    dstDir = new File(dstPath.substr(0, pos), false, cwd);
-                    cwd->children[dstDir->name] = dstDir;
-                }
-                newName = dstPath.substr(pos + 1);
-            } else {
-                dstDir = cwd;
-                newName = dstPath;
-            }
-        }
-
-        // if (dstDir->children.find(newName) != dstDir->children.end()) {
-        //     cout << "error: destination path already exists" << endl;
-        //     return;
-        // }
-
-        // 从源目录中删除
-        if (srcFile->parent) {
-            srcFile->parent->children.erase(srcFile->name);
-        }
-
-        // 更新文件名和父目录
-        srcFile->name = newName;
-        srcFile->parent = dstDir;
-        dstDir->children[newName] = srcFile;
-
-        // 如果是文件，更新内容
-        if (srcFile->isFile) {
-            dstDir->children[newName]->content = srcFile->content;
-        } else {
-            // 如果是目录，更新子目录的父指针
-            for (auto& [name, child] : srcFile->children) {
-                child->parent = dstDir->children[newName];
-            }
-        }
-    }
     // void mv(const string& srcPath, const string& dstPath) {
     //     File* srcFile = navigate(srcPath);
     //     if (!srcFile) {
     //         cout << "error: source path does not exist" << endl;
     //         return;
     //     }
-    //     File* dstDir = navigate(dstPath);
+
+    //     File* dstDir = nullptr;
+    //     string newName = dstPath;
+
     //     if (dstPath.back() == '/') {
-    //         srcFile->parent->children.erase(srcFile->name);
-    //         dstDir->children[srcFile->name] = srcFile;
-    //         srcFile->parent = dstDir;
-    //     }else{
-    //         if(!srcFile->isFile){//文件夹移文件夹
-    //             mkdir(dstPath);
-    //             dstDir = navigate(dstPath);
-    //             srcFile->parent->children.erase(srcFile->name);
-    //             for (auto& [name, child] : srcFile->children) {
-    //                 child->parent = dstDir;
-    //                 dstDir->children[child->name] = child;
+    //         // 移动到目标目录下
+    //         dstDir = navigate(dstPath.substr(0, dstPath.size() - 1));
+    //         if (!dstDir) {
+    //             // 目标目录不存在，创建目录
+    //             dstDir = new File(dstPath.substr(0, dstPath.size() - 1), false, cwd);
+    //             cwd->children[dstDir->name] = dstDir;
+    //         }
+    //         newName = srcFile->name;
+    //     } else {
+    //         // 重命名或移动为目标文件/目录
+    //         size_t pos = dstPath.find_last_of('/');
+    //         if (pos != string::npos) {
+    //             dstDir = navigate(dstPath.substr(0, pos));
+    //             if (!dstDir) {
+    //                 // 目标目录不存在，创建目录
+    //                 dstDir = new File(dstPath.substr(0, pos), false, cwd);
+    //                 cwd->children[dstDir->name] = dstDir;
     //             }
-    //         }else{//文件移文件
-    //             if(!dstDir){
-    //                 vector<string> parts = splitPath(dstPath);  // 获取路径的各个部分
-    //                 File* current = dstPath.empty() || dstPath[0] != '/' ? cwd : root;  // 从当前工作目录开始
-
-    //             for (size_t i = 0; i < parts.size() - 1; ++i) {
-    //                 const string& part = parts[i];
-    //                 // 如果当前目录没有这个子目录，报错并返回
-    //                 if (current->children.find(part) == current->children.end()) {
-    //                     File* newDir = new File(part, false, current);  // 创建新目录
-    //                     current->children[part] = newDir;  // 将新目录加入当前目录的子目录中
-    //                     return;
-    //                 }
-    //                 current = current->children[part]; // 进入下一级目录
-    //             }
-    //             const string& fileName = parts.back();
-    //             File* file = nullptr;
-    //             if (current->children.find(fileName) == current->children.end()) {
-    //                 file = new File(fileName, true, current); // 创建新文件
-    //                 current->children[fileName] = file;
-    //             } srcFile->parent->children.erase(srcFile->name);
-    //             current->content = srcFile->content;
-
-    //             }else{
-    //                 srcFile->parent->children.erase(srcFile->name);
-    //                 dstDir->content = srcFile->content;
-    //             }
+    //             newName = dstPath.substr(pos + 1);
+    //         } else {
+    //             dstDir = cwd;
+    //             newName = dstPath;
     //         }
     //     }
 
-        
+    //     // if (dstDir->children.find(newName) != dstDir->children.end()) {
+    //     //     cout << "error: destination path already exists" << endl;
+    //     //     return;
+    //     // }
+
+    //     // 从源目录中删除
+    //     if (srcFile->parent) {
+    //         srcFile->parent->children.erase(srcFile->name);
+    //     }
+
+    //     // 更新文件名和父目录
+    //     srcFile->name = newName;
+    //     srcFile->parent = dstDir;
+    //     dstDir->children[newName] = srcFile;
+
+    //     // 如果是文件，更新内容
+    //     if (srcFile->isFile) {
+    //         dstDir->children[newName]->content = srcFile->content;
+    //     } else {
+    //         // 如果是目录，更新子目录的父指针
+    //         for (auto& [name, child] : srcFile->children) {
+    //             child->parent = dstDir->children[newName];
+    //         }
+    //     }
     // }
+    void mv(const string& srcPath, const string& dstPath) {
+        File* srcFile = navigate(srcPath);
+        if (!srcFile) {
+            cout << "error: source path does not exist" << endl;
+            return;
+        }
+        File* dstDir = navigate(dstPath);
+
+        if (dstPath.back() == '/') {
+            srcFile->parent->children.erase(srcFile->name);
+            dstDir->children[srcFile->name] = srcFile;
+            srcFile->parent = dstDir;
+        }else{
+            if(dstDir){
+                File* p = dstDir->parent;
+                //删除dstpath的文件
+                dstDir->parent->children.erase(dstDir->name);
+            }
+            vector<string> parts = splitPath(dstPath);  // 获取路径的各个部分
+            File* current = dstPath.empty() || dstPath[0] != '/' ? cwd : root;  // 从当前工作目录开始
+            for (size_t i = 0; i < parts.size() - 1; ++i) {
+                const string& part = parts[i];
+                if (current->children.find(part) == current->children.end()) {
+                    File* newDir = new File(part, false, current);  // 创建新目录
+                    current->children[part] = newDir;  // 将新目录加入当前目录的子目录中
+                    return;
+                }
+                current = current->children[part]; // 进入下一级目录
+            }
+            srcFile->parent->children.erase(srcFile->name);
+            srcFile->parent = current;
+            srcFile->name = parts.back();
+            current->children[srcFile->name] = srcFile;
+        }
+
+        
+    }
     
 
 
