@@ -1,3 +1,5 @@
+# Update at 14:46 2024-12-27
+# Todo: mv, find
 #include <iostream>
 #include <string>
 #include <vector>
@@ -98,24 +100,35 @@ public:
         FileSystemNode *temp = path.empty() || path[0] != '/' ? currentDir : root;
 
         for (const auto &part : parts) {
-            temp = temp->getNode(part);
-            if (temp == nullptr) {
-                cout << "error\n";
-                return;
+            if (part == "..") {
+                if (temp->parent != nullptr) temp = temp->parent;
+            } else if (part == ".") {
+                continue;
+            } else {
+                temp = temp->getNode(part);
+                if (temp == nullptr) {
+                    cout << "error\n";
+                    return;
+                }
             }
         }
 
         vector<string> entries;
+        
         entries.push_back(".");
         entries.push_back("..");
+        
 
         for (auto &child : temp->children) {
             entries.push_back(child.first);
         }
 
         sort(entries.begin(), entries.end());
-        for (const auto &entry : entries) {
-            cout << entry << "\t";
+        for (size_t i = 0; i < entries.size(); ++i) {
+            cout << entries[i];
+            if (i < entries.size() - 1) {
+                cout << "\t";
+            }
         }
         cout << endl;
     }
@@ -269,22 +282,34 @@ public:
         vector<string> parts = splitPath(path);
         FileSystemNode *temp = path.empty() || path[0] != '/' ? currentDir : root;
 
+        // Traverse to the target node
         for (const auto &part : parts) {
-            temp = temp->getNode(part);
-            if (temp == nullptr) {
-                cout << "error\n";
-                return;
+            if (part == "..") {
+                if (temp->parent != nullptr) temp = temp->parent;
+            } else if (part == ".") {
+                continue;
+            } else {
+                temp = temp->getNode(part);
+                if (temp == nullptr) {
+                    //cout << "error\n";
+                    return;
+                }
             }
         }
-
-        if (recursive && !temp->isFile) {
-            for (auto &child : temp->children) {
-                rm(child.first, true);
+        if(recursive && !temp->isFile){
+            if(!temp->children.empty()){
+                for (auto &child : temp->children) {
+                    rm(child.first, temp->getNode(child.first)->isFile);
+                }
             }
         }
+        if (temp->parent != nullptr) {
+            temp->parent->children.erase(temp->name);
+        }
 
-        temp->parent->children.erase(temp->name);
+        // Delete the node and free memory
         delete temp;
+            
     }
     string trimQuotes(const string &str) {
         if (str.front() == '\'' && str.back() == '\'') {
@@ -357,7 +382,8 @@ private:
         }
     }
         return parts;
-    }    
+    }
+    
 };
 
 int main() {
@@ -390,12 +416,21 @@ int main() {
                 cout << "error\n";
             }
         } else if (command == "ls") {
+            /*
             string path = "/";
             if (iss >> path) {
                 fs.ls(path);
             } else {
                 fs.ls("");
-            }
+            }*/
+           string flag, path;
+           iss >> flag;
+           if (flag == "-a") {
+               iss >> path;
+               fs.ls(path);
+           }else{
+               cout << "error\n";
+           }
         } else if (command == "cat") {
             string path;
             iss >> path;
