@@ -1,5 +1,5 @@
-# Update at 14:46 2024-11-27
-# Todo: mv, find
+# Update at 19：12 2024-11-27
+# Todo: find
 #include <iostream>
 #include <string>
 #include <vector>
@@ -66,11 +66,15 @@ public:
             } else if (part == ".") {
                 continue;
             } else {
-                temp = temp->getNode(part);
-                if (temp == nullptr) {
+                if(temp->getNode(part)->isFile){
                     cout << "error\n";
                     return;
                 }
+                if (temp->getNode(part) == nullptr) {
+                    cout << "error\n";
+                    return;
+                }
+                temp = temp->getNode(part);               
             }
         }
         currentDir = temp;
@@ -105,11 +109,11 @@ public:
             } else if (part == ".") {
                 continue;
             } else {
-                temp = temp->getNode(part);
-                if (temp == nullptr) {
+                if (temp->getNode(part) == nullptr) {
                     cout << "error\n";
                     return;
                 }
+                temp = temp->getNode(part);               
             }
         }
 
@@ -195,6 +199,7 @@ public:
 }
 
     void find(const string &path, const string &pattern) {
+        
         vector<string> parts = splitPath(path);
         FileSystemNode *temp = path.empty() || path[0] != '/' ? currentDir : root;
 
@@ -214,8 +219,9 @@ public:
             cout << match << endl;
         }
     }
-
+    
     void findHelper(FileSystemNode *node, string path, const string &pattern, vector<string> &matches) {
+        
         if (regex_match(node->name, regex(pattern))) {
             matches.push_back(path + node->name);
         }
@@ -241,40 +247,97 @@ public:
     void mv(const string &src, const string &dest) {
         vector<string> srcParts = splitPath(src);
         vector<string> destParts = splitPath(dest);
-        FileSystemNode *srcNode = currentDir;
-        FileSystemNode *destNode = currentDir;
-
-        if (src[0] == '/') {
-            srcNode = root;
-        }
-        if (dest[0] == '/') {
-            destNode = root;
-        }
-
+        // Traverse to the source node
+        /*
+        if(destParts.back().empty() || srcParts.back().empty()){
+            cout << "error\n";
+            return;
+        }*/
+        FileSystemNode *srcNode = src.empty() || src[0] != '/' ? currentDir : root;
         for (const auto &part : srcParts) {
-            srcNode = srcNode->getNode(part);
-            if (srcNode == nullptr) {
-                cout << "error\n";
-                return;
+            if (part == "..") {
+                if (srcNode->parent != nullptr) {
+                    srcNode = srcNode->parent;
+                }
+            } else if (part == ".") {
+                continue;
+            } else {
+                if (srcNode->getNode(part) == nullptr) {
+                    cout << "error\n";
+                    return;
+                }
+                srcNode = srcNode->getNode(part);               
             }
         }
 
-        for (size_t i = 0; i < destParts.size() - 1; ++i) {
-            destNode = destNode->getNode(destParts[i]);
-            if (destNode == nullptr) {
-                cout << "error\n";
-                return;
+        // Traverse to the destination node
+        FileSystemNode *destNode = dest.empty() || dest[0] != '/' ? currentDir : root;
+        string newName;
+        
+        if (dest.back() != '/') {
+            newName = destParts.back();;
+            for (size_t i = 0; i <destParts.size() - 1; ++i) {
+                if (destParts[i] == "..") {
+                    if (destNode->parent != nullptr) {
+                        destNode = destNode->parent;
+                    }
+                } else if (destParts[i] == ".") {
+                    continue;
+                } else {
+                    if (destNode->getNode(destParts[i]) == nullptr) {
+                        cout << "error\n";
+                        return;
+                    }
+                    destNode = destNode->getNode(destParts[i]);                    
+                }
             }
+        } else {
+            newName = srcNode->name;
+            //cout << "newname: " << newName << endl;            
+                for (size_t i = 0; i < destParts.size(); ++i) {
+                    if (destParts[i] == "..") {
+                        if (destNode->parent != nullptr) {
+                            destNode = destNode->parent;
+                        }
+                    } else if (destParts[i] == ".") {
+                        continue;
+                    } else {
+                        if (destNode->getNode(destParts[i]) == nullptr) {
+                            cout << "error\n";
+                            return;
+                        }
+                        destNode = destNode->getNode(destParts[i]);                    
+                    }
+                }
+            
         }
-
-        if (destNode->getNode(destParts.back()) != nullptr) {
+        
+        // Check if the destination is a directory
+        if (destNode->isFile) {
+            // Destination is a file, cannot move to a file
             cout << "error\n";
             return;
         }
 
-        srcNode->parent->children.erase(srcNode->name);
+        // If the destination already has a node with the same name as the new name, remove it
+        
+        if (destNode->children.find(newName) != destNode->children.end()) {
+            delete destNode->children[newName];
+            destNode->children.erase(newName);
+        }
+
+        // Remove the source node from its parent's children list
+        if (srcNode->parent != nullptr) {
+            srcNode->parent->children.erase(srcNode->name);
+        } else {
+            cout << "error\n";
+            return;
+        }
+
+        // Add the source node to the destination directory
         srcNode->parent = destNode;
-        srcNode->name = destParts.back();
+        //cout << newName << endl;
+        srcNode->name = newName;
         destNode->addNode(srcNode);
     }
 
@@ -453,11 +516,11 @@ int main() {
             } else {
                 fs.echo(content, path, op == ">>");
             }
-        } else if (command == "find") {
+        } /*else if (command == "find") {
             string startPath, pattern;
             iss >> startPath >> pattern;
             fs.find(startPath, pattern);
-        } else if (command == "pwd") {
+        }*/ else if (command == "pwd") {
             fs.pwd();
         } else if (command == "mv") {
             string src, dest;
