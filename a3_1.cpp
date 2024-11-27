@@ -254,7 +254,7 @@ class directory {
             // 遍历路径的每个部分，除了最后一个部分之外，都要确保路径存在
             for (size_t i = 0; i < parts.size() - 1; ++i) {
                 const string& part = parts[i];
-
+ 
                 // 如果当前目录没有这个子目录，报错并返回
                 if (current->children.find(part) == current->children.end()) {
                     cout << "error" << endl;
@@ -263,6 +263,7 @@ class directory {
 
                 current = current->children[part]; // 进入下一级目录
             }
+            //如果最后一个路径是文件夹，报错并返回
 
             // 最后一个部分是文件，要确保其存在，如果不存在则创建它
             const string& fileName = parts.back();
@@ -296,9 +297,7 @@ class directory {
             if (file && file->isFile) {
                 file->parent->children.erase(file->name);
                 delete file;
-            } else {
-                cout << "error" << endl;
-            }
+            } 
         } else if (args.size() == 2 && args[0] == "-r") {
             // Recursively remove a directory and its contents
             File* dir = navigate(args[1]);
@@ -308,13 +307,162 @@ class directory {
                 // Then remove the directory itself
                 dir->parent->children.erase(dir->name);
                 delete dir;
+            } 
+        } 
+    }
+    // find 函数
+    void find(const string& startPath, const string& pattern) {
+        File* startDir = navigate(startPath);
+        if (!startDir) {
+            return;  // 如果起始路径不存在，直接返回
+        }
+
+        vector<string> results;
+        regex re(pattern);
+
+        findHelper(startDir, re, ".", results);
+
+        sort(results.begin(), results.end());
+        for (const string& result : results) {
+            if (startPath.back() == '/') {
+                cout << startPath << result.substr(2) << endl;  // 去掉 "./"
             } else {
-                cout << "error" << endl;
+                cout << startPath << "/" << result.substr(2) << endl;  // 去掉 "./"
             }
-        } else {
-            cout << "error" << endl;
         }
     }
+
+    // findHelper 函数
+    void findHelper(File* dir, const regex& re, const string& path, vector<string>& results) {
+        for (const auto& child : dir->children) {
+            string childPath = path + "/" + child.second->name;
+            if (regex_match(child.second->name, re)) {
+                results.push_back(childPath);
+            }
+            if (!child.second->isFile) {
+                findHelper(child.second, re, childPath, results);
+            }
+        }
+    }
+
+
+
+    void mv(const string& srcPath, const string& dstPath) {
+        File* srcFile = navigate(srcPath);
+        if (!srcFile) {
+            cout << "error: source path does not exist" << endl;
+            return;
+        }
+
+        File* dstDir = nullptr;
+        string newName = dstPath;
+
+        if (dstPath.back() == '/') {
+            // 移动到目标目录下
+            dstDir = navigate(dstPath.substr(0, dstPath.size() - 1));
+            if (!dstDir) {
+                // 目标目录不存在，创建目录
+                dstDir = new File(dstPath.substr(0, dstPath.size() - 1), false, cwd);
+                cwd->children[dstDir->name] = dstDir;
+            }
+            newName = srcFile->name;
+        } else {
+            // 重命名或移动为目标文件/目录
+            size_t pos = dstPath.find_last_of('/');
+            if (pos != string::npos) {
+                dstDir = navigate(dstPath.substr(0, pos));
+                if (!dstDir) {
+                    // 目标目录不存在，创建目录
+                    dstDir = new File(dstPath.substr(0, pos), false, cwd);
+                    cwd->children[dstDir->name] = dstDir;
+                }
+                newName = dstPath.substr(pos + 1);
+            } else {
+                dstDir = cwd;
+                newName = dstPath;
+            }
+        }
+
+        // if (dstDir->children.find(newName) != dstDir->children.end()) {
+        //     cout << "error: destination path already exists" << endl;
+        //     return;
+        // }
+
+        // 从源目录中删除
+        if (srcFile->parent) {
+            srcFile->parent->children.erase(srcFile->name);
+        }
+
+        // 更新文件名和父目录
+        srcFile->name = newName;
+        srcFile->parent = dstDir;
+        dstDir->children[newName] = srcFile;
+
+        // 如果是文件，更新内容
+        if (srcFile->isFile) {
+            dstDir->children[newName]->content = srcFile->content;
+        } else {
+            // 如果是目录，更新子目录的父指针
+            for (auto& [name, child] : srcFile->children) {
+                child->parent = dstDir->children[newName];
+            }
+        }
+    }
+    // void mv(const string& srcPath, const string& dstPath) {
+    //     File* srcFile = navigate(srcPath);
+    //     if (!srcFile) {
+    //         cout << "error: source path does not exist" << endl;
+    //         return;
+    //     }
+    //     File* dstDir = navigate(dstPath);
+    //     if (dstPath.back() == '/') {
+    //         srcFile->parent->children.erase(srcFile->name);
+    //         dstDir->children[srcFile->name] = srcFile;
+    //         srcFile->parent = dstDir;
+    //     }else{
+    //         if(!srcFile->isFile){//文件夹移文件夹
+    //             mkdir(dstPath);
+    //             dstDir = navigate(dstPath);
+    //             srcFile->parent->children.erase(srcFile->name);
+    //             for (auto& [name, child] : srcFile->children) {
+    //                 child->parent = dstDir;
+    //                 dstDir->children[child->name] = child;
+    //             }
+    //         }else{//文件移文件
+    //             if(!dstDir){
+    //                 vector<string> parts = splitPath(dstPath);  // 获取路径的各个部分
+    //                 File* current = dstPath.empty() || dstPath[0] != '/' ? cwd : root;  // 从当前工作目录开始
+
+    //             for (size_t i = 0; i < parts.size() - 1; ++i) {
+    //                 const string& part = parts[i];
+    //                 // 如果当前目录没有这个子目录，报错并返回
+    //                 if (current->children.find(part) == current->children.end()) {
+    //                     File* newDir = new File(part, false, current);  // 创建新目录
+    //                     current->children[part] = newDir;  // 将新目录加入当前目录的子目录中
+    //                     return;
+    //                 }
+    //                 current = current->children[part]; // 进入下一级目录
+    //             }
+    //             const string& fileName = parts.back();
+    //             File* file = nullptr;
+    //             if (current->children.find(fileName) == current->children.end()) {
+    //                 file = new File(fileName, true, current); // 创建新文件
+    //                 current->children[fileName] = file;
+    //             } srcFile->parent->children.erase(srcFile->name);
+    //             current->content = srcFile->content;
+
+    //             }else{
+    //                 srcFile->parent->children.erase(srcFile->name);
+    //                 dstDir->content = srcFile->content;
+    //             }
+    //         }
+    //     }
+
+        
+    // }
+    
+
+
 
 
 
@@ -372,30 +520,30 @@ int main() {
             bool inQuotes = false;
             string quotedText;
 
-        while (argStream >> temp) {
-            if ((temp.front() == '\'' || temp.front() == '"') && !inQuotes) {
-                // 开始一个带引号的文本
-                inQuotes = true;
-                quotedText = temp;
-                // 如果引号里没有结束，继续处理
-                if (temp.back() == '\'' || temp.back() == '"') {
-                    inQuotes = false;
-                    args.push_back(quotedText);  // 处理完一个带引号的文本
+            while (argStream >> temp) {
+                if ((temp.front() == '\'' || temp.front() == '"') && !inQuotes) {
+                    // 开始一个带引号的文本
+                    inQuotes = true;
+                    quotedText = temp;
+                    // 如果引号里没有结束，继续处理
+                    if (temp.back() == '\'' || temp.back() == '"') {
+                        inQuotes = false;
+                        args.push_back(quotedText);  // 处理完一个带引号的文本
+                    }
+                } else if (inQuotes) {
+                    // 处理引号中的内容
+                    quotedText += " " + temp;
+                    if (temp.back() == '\'' || temp.back() == '"') {
+                        inQuotes = false;
+                        args.push_back(quotedText); // 添加完整的引号内容
+                    }
+                } else {
+                    // 普通参数
+                    args.push_back(temp);
                 }
-            } else if (inQuotes) {
-                // 处理引号中的内容
-                quotedText += " " + temp;
-                if (temp.back() == '\'' || temp.back() == '"') {
-                    inQuotes = false;
-                    args.push_back(quotedText); // 添加完整的引号内容
-                }
-            } else {
-                // 普通参数
-                args.push_back(temp);
             }
-        }
             if (inQuotes) {
-                cout << "error6" << endl; // 引号不匹配
+                cout << "error" << endl; // 引号不匹配
             } else {
                 fs.echo(args);
             }
@@ -414,9 +562,19 @@ int main() {
             } else {
                 fs.ls("");  // 默认无参数时，列出当前目录
             }
+        }else if (cmd == "find") {
+            string startPath, option, pattern;
+            ss >> startPath >> option >> pattern;
+            string p = pattern.substr(1, pattern.size() - 2);
+            if (option == "-name") {
+                fs.find(startPath, p);
+            }
+        }else if (cmd == "mv") {
+            string srcPath, dstPath;
+            ss >> srcPath >> dstPath;
+            fs.mv(srcPath, dstPath);
         }
     }
-
 
     return 0;
 }
