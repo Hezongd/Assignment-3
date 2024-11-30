@@ -109,12 +109,12 @@
     STATUS DEFRAG 
     STATUS QUIT
 #### 样例输出1：
-    file1[0 -1] 
-    file2[1 2 -1] 
-    file1[0 3 2 4 -1] 
-    file2[1 -1] 
-    file1[0 1 2 3 -1] 
-    file2[4- 1]
+    file1 [0 -1] 
+    file2 [1 2 -1] 
+    file1 [0 3 2 4 -1] 
+    file2 [1 -1] 
+    file1 [0 1 2 3 -1] 
+    file2 [4- 1]
 #### 样例输入2：
     INIT 5
     CREATE file1 10
